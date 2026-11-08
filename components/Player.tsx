@@ -1,9 +1,12 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Cover, { hueOf } from "./Cover";
 export type PTrack = { id: string; title: string; audioUrl: string; coverUrl?: string | null; artist: { name: string } };
-type Ctx = { play: (t: PTrack, q?: PTrack[]) => void };
-const C = createContext<Ctx>({ play() {} }); export const usePlayer = () => useContext(C);
+type Ctx = { play: (t: PTrack, q?: PTrack[]) => void; currentId?: string; playing: boolean };
+const C = createContext<Ctx>({ play() {}, playing: false }); export const usePlayer = () => useContext(C);
+const P = { play: "M8 5v14l11-7z", pause: "M6 5h4v14H6zM14 5h4v14h-4z", next: "M6 6l8.5 6L6 18zM16 6h2v12h-2z", prev: "M18 18l-8.5-6L18 6zM6 6h2v12H6z" };
+const Ic = ({ d, s = 24 }: { d: string; s?: number }) => <svg viewBox="0 0 24 24" width={s} height={s} fill="currentColor"><path d={d} /></svg>;
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
@@ -26,24 +29,43 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const toggle = () => { const el = a.current!; if (el.paused) el.play().then(() => setPlaying(true)); else { el.pause(); setPlaying(false); } };
   const ended = () => { if (repeat === "one") { a.current!.currentTime = 0; a.current!.play(); } else if (repeat === "all" || i < queue.length - 1 || shuffle) next(); else setPlaying(false); };
 
-  return (<C.Provider value={{ play }}>
+  const pct = dur ? (pos / dur) * 100 : 0; const h = cur ? hueOf(cur.title) : 270;
+  const btn = "grid h-11 w-11 place-items-center rounded-full transition active:scale-95 hover:bg-white/10";
+  return (<C.Provider value={{ play, currentId: cur?.id, playing }}>
     <audio ref={a} onTimeUpdate={e => setPos(e.currentTarget.currentTime)} onLoadedMetadata={e => setDur(e.currentTarget.duration)} onEnded={ended} />
     {children}
-    <AnimatePresence>{cur && (
-      <motion.div initial={{ y: 80 }} animate={{ y: 0 }} exit={{ y: 80 }} className={`fixed inset-x-0 bottom-0 z-50 bg-ink-2/95 backdrop-blur border-t border-white/10 ${full ? "top-0 flex flex-col items-center justify-center gap-6 p-8" : "px-4 py-2"}`}>
-        <div className={full ? "flex flex-col items-center gap-6" : "flex items-center gap-3"}>
-          <motion.img onClick={() => setFull(!full)} animate={{ rotate: playing ? 360 : 0 }} transition={playing ? { repeat: Infinity, duration: 12, ease: "linear" } : {}}
-            src={cur.coverUrl || "/demo/cover.png"} alt="" className={`${full ? "h-64 w-64" : "h-10 w-10"} rounded-full object-cover`} />
-          <div><p className="font-semibold">{cur.title}</p><p className="text-sm text-white/60">{cur.artist.name}</p></div>
+    <AnimatePresence>{cur && !full && (
+      <motion.div key="mini" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+        className="fixed inset-x-2 z-50 overflow-hidden rounded-2xl border border-white/10 bg-ink-2/95 backdrop-blur" style={{ bottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
+        <div className="absolute inset-x-0 top-0 h-0.5 bg-white/10"><div className="h-full bg-violet" style={{ width: `${pct}%` }} /></div>
+        <div className="flex items-center gap-3 p-2">
+          <button onClick={() => setFull(true)} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-label="Open player">
+            <Cover title={cur.title} url={cur.coverUrl} className={`h-11 w-11 shrink-0 ${playing ? "spin" : ""}`} />
+            <span className="min-w-0"><span className="block truncate font-semibold">{cur.title}</span><span className="block truncate text-sm text-white/55">{cur.artist.name}</span></span>
+          </button>
+          <button onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="grid h-11 w-11 place-items-center rounded-full bg-violet"><Ic d={playing ? P.pause : P.play} /></button>
+          <button onClick={next} aria-label="Next" className={btn}><Ic d={P.next} /></button>
         </div>
-        <input aria-label="Seek" type="range" min={0} max={dur || 1} value={pos} onChange={e => (a.current!.currentTime = +e.target.value)} className={full ? "w-full max-w-md" : "w-full"} />
-        <div className="flex items-center gap-4 text-sm">
-          <span>{fmt(pos)}/{fmt(dur || 0)}</span>
-          <button onClick={() => setShuffle(!shuffle)} className={shuffle ? "text-violet" : ""}>Shuffle</button>
-          <button onClick={prev}>Prev</button><button onClick={toggle} className="rounded-full bg-violet px-4 py-1">{playing ? "Pause" : "Play"}</button><button onClick={next}>Next</button>
-          <button onClick={() => setRepeat(repeat === "off" ? "all" : repeat === "all" ? "one" : "off")}>Repeat: {repeat}</button>
-          <input aria-label="Volume" type="range" min={0} max={1} step={0.05} value={vol} onChange={e => setVol(+e.target.value)} className="w-20" />
+      </motion.div>)}
+    {cur && full && (
+      <motion.div key="full" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 260 }}
+        className="fixed inset-0 z-50 flex flex-col items-center justify-between px-6 pb-8 pt-6" style={{ background: `radial-gradient(120% 70% at 50% 0%, hsl(${h} 70% 28%), #0E0B14 70%)`, paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}>
+        <button onClick={() => setFull(false)} className="self-start rounded-full px-3 py-1 text-sm text-white/70 hover:bg-white/10">Close</button>
+        <Cover title={cur.title} url={cur.coverUrl} className={`aspect-square w-[min(72vw,320px)] shadow-2xl ${playing ? "spin" : "spin paused"}`} />
+        <div className="w-full max-w-md text-center"><p className="truncate text-2xl font-bold">{cur.title}</p><p className="text-white/60">{cur.artist.name}</p></div>
+        <div className="w-full max-w-md">
+          <input aria-label="Seek" type="range" min={0} max={dur || 1} value={pos} onChange={e => (a.current!.currentTime = +e.target.value)} className="w-full accent-violet" />
+          <div className="flex justify-between text-xs text-white/55"><span>{fmt(pos)}</span><span>{fmt(dur || 0)}</span></div>
+          <div className="mt-3 flex items-center justify-between">
+            <button onClick={() => setShuffle(!shuffle)} aria-label="Shuffle" className={`${btn} ${shuffle ? "text-ember" : "text-white/60"}`}>⇄</button>
+            <button onClick={prev} aria-label="Previous" className={btn}><Ic d={P.prev} s={28} /></button>
+            <button onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="grid h-16 w-16 place-items-center rounded-full bg-violet shadow-[0_8px_30px_-6px_#8B5CFF]"><Ic d={playing ? P.pause : P.play} s={32} /></button>
+            <button onClick={next} aria-label="Next" className={btn}><Ic d={P.next} s={28} /></button>
+            <button onClick={() => setRepeat(repeat === "off" ? "all" : repeat === "all" ? "one" : "off")} aria-label={`Repeat ${repeat}`} className={`${btn} ${repeat !== "off" ? "text-ember" : "text-white/60"}`}>{repeat === "one" ? "↻1" : "↻"}</button>
+          </div>
+          <input aria-label="Volume" type="range" min={0} max={1} step={0.05} value={vol} onChange={e => setVol(+e.target.value)} className="mt-4 w-full accent-ember" />
         </div>
-      </motion.div>)}</AnimatePresence>
+      </motion.div>)}
+    </AnimatePresence>
   </C.Provider>);
 }
