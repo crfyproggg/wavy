@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String?    @unique
+  passwordHash String?
+  telegramId   BigInt?    @unique
+  displayName  String
+  avatarUrl    String?
+  plan         Plan       @default(FREE)
+  isAdmin      Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  likes        Like[]
+  playlists    Playlist[]
+  comments     Comment[]
+  plays        Play[]
+  following    Follow[]
+  artist       Artist?
+}
+
+model Artist {
+  id        String   @id @default(cuid())
+  name      String
+  bio       String?
+  imageUrl  String?
+  userId    String?  @unique
+  user      User?    @relation(fields: [userId], references: [id])
+  tracks    Track[]
+  albums    Album[]
+  followers Follow[]
+}
+
+model Album {
+  id       String  @id @default(cuid())
+  title    String
+  coverUrl String?
+  artistId String
+  artist   Artist  @relation(fields: [artistId], references: [id])
+  tracks   Track[]
+}
+
+model Track {
+  id              String          @id @default(cuid())
+  title           String
+  genre           String
+  description     String?
+  audioUrl        String
+  coverUrl        String?
+  durationSec     Int             @default(0)
+  license         String
+  rightsConfirmed Boolean         @default(false)
+  status          String          @default("PENDING")
+  playCount       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  artistId        String
+  artist          Artist          @relation(fields: [artistId], references: [id])
+  albumId         String?
+  album           Album?          @relation(fields: [albumId], references: [id])
+  likes           Like[]
+  comments        Comment[]
+  plays           Play[]
+  items           PlaylistTrack[]
+
+  @@index([genre])
+  @@index([title])
+}
+
+model Like {
+  userId  String
+  trackId String
+  user    User   @relation(fields: [userId], references: [id])
+  track   Track  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@id([userId, trackId])
+}
+
+model Follow {
+  userId   String
+  artistId String
+  user     User   @relation(fields: [userId], references: [id])
+  artist   Artist @relation(fields: [artistId], references: [id])
+
+  @@id([userId, artistId])
+}
+
+model Play {
+  id      String   @id @default(cuid())
+  userId  String?
+  trackId String
+  at      DateTime @default(now())
+  user    User?    @relation(fields: [userId], references: [id])
+  track   Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id      String   @id @default(cuid())
+  body    String
+  userId  String
+  trackId String
+  at      DateTime @default(now())
+  user    User     @relation(fields: [userId], references: [id])
+  track   Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+}
+
+model Playlist {
+  id       String          @id @default(cuid())
+  name     String
+  coverUrl String?
+  isPublic Boolean         @default(false)
+  ownerId  String
+  owner    User            @relation(fields: [ownerId], references: [id])
+  items    PlaylistTrack[]
+}
+
+model PlaylistTrack {
+  playlistId String
+  trackId    String
+  position   Int
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  track      Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@id([playlistId, trackId])
+}
