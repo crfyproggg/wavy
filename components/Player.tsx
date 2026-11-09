@@ -36,11 +36,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     {children}
     <AnimatePresence>{cur && !full && (
       <motion.div key="mini" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-        className="fixed inset-x-2 z-50 overflow-hidden rounded-2xl border border-white/10 bg-ink-2/95 backdrop-blur" style={{ bottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
+        className="fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+68px)] z-50 overflow-hidden rounded-xl border border-line bg-ink-2/95 backdrop-blur sm:bottom-2">
         <div className="absolute inset-x-0 top-0 h-0.5 bg-white/10"><div className="h-full bg-violet" style={{ width: `${pct}%` }} /></div>
         <div className="flex items-center gap-3 p-2">
           <button onClick={() => setFull(true)} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-label="Open player">
-            <Cover title={cur.title} url={cur.coverUrl} className={`h-11 w-11 shrink-0 ${playing ? "spin" : ""}`} />
+            <Cover title={cur.title} url={cur.coverUrl} className={`h-11 w-11 shrink-0`} />
             <span className="min-w-0"><span className="block truncate font-semibold">{cur.title}</span><span className="block truncate text-sm text-white/55">{cur.artist.name}</span></span>
           </button>
           <button onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="grid h-11 w-11 place-items-center rounded-full bg-violet"><Ic d={playing ? P.pause : P.play} /></button>
@@ -49,9 +49,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       </motion.div>)}
     {cur && full && (
       <motion.div key="full" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 260 }}
-        className="fixed inset-0 z-50 flex flex-col items-center justify-between px-6 pb-8 pt-6" style={{ background: `radial-gradient(120% 70% at 50% 0%, hsl(${h} 70% 28%), #0E0B14 70%)`, paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}>
+        className="fixed inset-0 z-50 flex flex-col items-center justify-between px-6 pb-8 pt-6" style={{ background: `radial-gradient(120% 70% at 50% 0%, hsl(${h} 25% 22%), #121212 70%)`, paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}>
         <button onClick={() => setFull(false)} className="self-start rounded-full px-3 py-1 text-sm text-white/70 hover:bg-white/10">Close</button>
-        <Cover title={cur.title} url={cur.coverUrl} className={`aspect-square w-[min(72vw,320px)] shadow-2xl ${playing ? "spin" : "spin paused"}`} />
+        <Cover title={cur.title} url={cur.coverUrl} className={`aspect-square w-[min(72vw,320px)] shadow-2xl`} />
         <div className="w-full max-w-md text-center"><p className="truncate text-2xl font-bold">{cur.title}</p><p className="text-white/60">{cur.artist.name}</p></div>
         <div className="w-full max-w-md">
           <input aria-label="Seek" type="range" min={0} max={dur || 1} value={pos} onChange={e => (a.current!.currentTime = +e.target.value)} className="w-full accent-violet" />

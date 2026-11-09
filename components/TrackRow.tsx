@@ -1,11 +1,14 @@
 "use client";
-import { usePlayer, PTrack } from "./Player"; import Cover from "./Cover";
+import Link from "next/link"; import { usePlayer, PTrack } from "./Player"; import Cover from "./Cover";
 export default function TrackRow({ t, queue }: { t: PTrack; queue: PTrack[] }) {
-  const { play, currentId, playing } = usePlayer(); const on = currentId === t.id;
+  const { play, currentId } = usePlayer(); const on = currentId === t.id;
   return (
-    <button onClick={() => play(t, queue)} className={`flex w-full items-center gap-3 rounded-2xl p-2 pr-4 text-left transition active:scale-[.99] ${on ? "bg-violet/15" : "hover:bg-white/5"}`}>
-      <Cover title={t.title} url={t.coverUrl} className={`h-14 w-14 shrink-0 ${on && playing ? "spin" : ""}`} />
-      <span className="min-w-0 flex-1"><span className={`block truncate font-semibold ${on ? "text-violet" : ""}`}>{t.title}</span><span className="block truncate text-sm text-white/55">{t.artist.name}</span></span>
-    </button>
+    <div className={`flex items-center gap-2 rounded-md pr-3 transition ${on ? "bg-white/10" : "hover:bg-white/5"}`}>
+      <button onClick={() => play(t, queue)} className="flex min-w-0 flex-1 items-center gap-3 p-2 text-left">
+        <Cover title={t.title} url={t.coverUrl} className="h-12 w-12 shrink-0" />
+        <span className="min-w-0"><span className={`block truncate text-sm font-semibold ${on ? "text-ember" : ""}`}>{t.title}</span><span className="block truncate text-xs text-mute">{t.artist.name}</span></span>
+      </button>
+      <Link href={`/track/${t.id}`} className="text-xs font-semibold text-mute hover:text-white">Details</Link>
+    </div>
   );
 }
